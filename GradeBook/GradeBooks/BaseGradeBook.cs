@@ -13,9 +13,8 @@ namespace GradeBook.GradeBooks
         public string Name { get; set; }
         public List<Student> Students { get; set; }
         public GradeBookType Type { get; set; }
-        public bool IsWeighted { get; set; } // Додали властивість IsWeighted
+        public bool IsWeighted { get; set; }
 
-        // Оновили конструктор, щоб він приймав isWeighted
         public BaseGradeBook(string name, bool isWeighted)
         {
             Name = name;
@@ -107,7 +106,6 @@ namespace GradeBook.GradeBooks
             }
         }
 
-        // Оновили метод GetGPA, щоб він враховував вагу оцінок
         public virtual double GetGPA(char letterGrade, StudentType studentType)
         {
             var gpa = 0d;
