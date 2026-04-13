@@ -13,9 +13,13 @@ namespace GradeBook.GradeBooks
         public string Name { get; set; }
         public List<Student> Students { get; set; }
         public GradeBookType Type { get; set; }
-        public BaseGradeBook(string name)
+        public bool IsWeighted { get; set; } // Додали властивість IsWeighted
+
+        // Оновили конструктор, щоб він приймав isWeighted
+        public BaseGradeBook(string name, bool isWeighted)
         {
             Name = name;
+            IsWeighted = isWeighted;
             Students = new List<Student>();
         }
 
@@ -103,22 +107,35 @@ namespace GradeBook.GradeBooks
             }
         }
 
+        // Оновили метод GetGPA, щоб він враховував вагу оцінок
         public virtual double GetGPA(char letterGrade, StudentType studentType)
         {
+            var gpa = 0d;
             switch (letterGrade)
             {
                 case 'A':
-                    return 4;
+                    gpa = 4;
+                    break;
                 case 'B':
-                    return 3;
+                    gpa = 3;
+                    break;
                 case 'C':
-                    return 2;
+                    gpa = 2;
+                    break;
                 case 'D':
-                    return 1;
+                    gpa = 1;
+                    break;
                 case 'F':
-                    return 0;
+                    gpa = 0;
+                    break;
             }
-            return 0;
+
+            if (IsWeighted && (studentType == StudentType.Honors || studentType == StudentType.DualEnrolled))
+            {
+                gpa += 1;
+            }
+
+            return gpa;
         }
 
         public virtual void CalculateStatistics()
@@ -170,7 +187,6 @@ namespace GradeBook.GradeBooks
                 }
             }
 
-            // #todo refactor into it's own method with calculations performed here
             Console.WriteLine("Average Grade of all students is " + (allStudentsPoints / Students.Count));
             if (campusPoints != 0)
                 Console.WriteLine("Average for only local students is " + (campusPoints / Students.Where(e => e.Enrollment == EnrollmentType.Campus).Count()));
@@ -217,16 +233,8 @@ namespace GradeBook.GradeBooks
                 return 'F';
         }
 
-        /// <summary>
-        ///     Converts json to the appropriate gradebook type.
-        ///     Note: This method contains code that is not recommended practice.
-        ///     This has been used as a compromise to avoid adding additional complexity to the learner.
-        /// </summary>
-        /// <returns>The to gradebook.</returns>
-        /// <param name="json">Json.</param>
         public static dynamic ConvertToGradeBook(string json)
         {
-            // Get GradeBookType from the GradeBook.Enums namespace
             var gradebookEnum = (from assembly in AppDomain.CurrentDomain.GetAssemblies()
                                  from type in assembly.GetTypes()
                                  where type.FullName == "GradeBook.Enums.GradeBookType"
@@ -235,7 +243,6 @@ namespace GradeBook.GradeBooks
             var jobject = JsonConvert.DeserializeObject<JObject>(json);
             var gradeBookType = jobject.Property("Type")?.Value?.ToString();
 
-            // Check if StandardGradeBook exists
             if ((from assembly in AppDomain.CurrentDomain.GetAssemblies()
                  from type in assembly.GetTypes()
                  where type.FullName == "GradeBook.GradeBooks.StandardGradeBook"
@@ -249,20 +256,17 @@ namespace GradeBook.GradeBooks
                     gradeBookType = Enum.GetName(gradebookEnum, int.Parse(gradeBookType));
             }
 
-            // Get GradeBook from the GradeBook.GradeBooks namespace
             var gradebook = (from assembly in AppDomain.CurrentDomain.GetAssemblies()
                              from type in assembly.GetTypes()
                              where type.FullName == "GradeBook.GradeBooks." + gradeBookType + "GradeBook"
                              select type).FirstOrDefault();
 
-
-            // Protection code
             if (gradebook == null)
                 gradebook = (from assembly in AppDomain.CurrentDomain.GetAssemblies()
                              from type in assembly.GetTypes()
                              where type.FullName == "GradeBook.GradeBooks.StandardGradeBook"
                              select type).FirstOrDefault();
-            
+
             return JsonConvert.DeserializeObject(json, gradebook);
         }
     }
